@@ -15,26 +15,12 @@ public class EventListener {
     static String pinNumber;
     static Boolean pinState;
     static LocalDateTime dateTime;
-    static LocalDateTime dateTimeS1in;
-    static LocalDateTime dateTimeS1out;
-    static LocalDateTime dateTimeS2in;
-    static LocalDateTime dateTimeS2out;
-    static LocalDateTime dateTimeS3in;
-    static LocalDateTime dateTimeS3out;
-    static LocalDateTime dateTimeS4in;
-    static LocalDateTime dateTimeS4out;
-    static Duration station1CycleTime;
-    static Duration station2CycleTime;
-    static Duration station3CycleTime;
-    static Duration station4CycleTime;
-    static LocalDate station1Date;
-    static LocalDate station2Date;
-    static LocalDate station3Date;
-    static LocalDate station4Date;
+
 
 
     public static void main(String args[]) throws InterruptedException, IOException {
         System.out.println("<--Pi4J--> GPIO Listen Example ... started.");
+        PostCreator postCreator = new PostCreator();
 
         // create gpio controller
         final GpioController gpio = GpioFactory.getInstance();
@@ -108,7 +94,6 @@ public class EventListener {
                 // display pin state on console
                 stateChange(event);
             }
-
         });
         s4out.addListener(new GpioPinListenerDigital() {
             @Override
@@ -116,53 +101,9 @@ public class EventListener {
                 // display pin state on console
                 stateChange(event);
             }
-
         });
 
-
-        if (s1in.isLow()){
-            dateTimeS1in=LocalDateTime.now();
-        }
-
-        if (s1out.isLow()){
-            dateTimeS1out=LocalDateTime.now();
-            station1Date= LocalDate.now();
-        }
-
-        if (s2in.isLow()){
-            dateTimeS2in=LocalDateTime.now();
-        }
-
-        if (s2out.isLow()){
-            dateTimeS2out=LocalDateTime.now();
-            station2Date= LocalDate.now();
-        }
-
-        if (s3in.isLow()){
-            dateTimeS3in=LocalDateTime.now();
-        }
-
-        if (s3out.isLow()){
-            dateTimeS3out=LocalDateTime.now();
-            station3Date= LocalDate.now();
-        }
-
-        if (s4in.isLow()){
-            dateTimeS4in=LocalDateTime.now();
-        }
-
-        if (s4out.isLow()){
-            dateTimeS4out=LocalDateTime.now();
-            station4Date= LocalDate.now();
-        }
-
-         station1CycleTime = Duration.between(dateTimeS1out,dateTimeS1in);
-         station2CycleTime = Duration.between(dateTimeS2out,dateTimeS2in);
-         station3CycleTime = Duration.between(dateTimeS3out,dateTimeS3in);
-         station4CycleTime = Duration.between(dateTimeS4out,dateTimeS4in);
-
-
-
+        postCreator.jsonCreator();
         // keep program running until user aborts (CTRL-C)
         while (true) {
             Thread.sleep(500);
@@ -171,22 +112,18 @@ public class EventListener {
         // gpio.shutdown();   <--- implement this method call if you wish to terminate the Pi4J GPIO controller
 
 
+
     }
 
     public static void stateChange(GpioPinDigitalStateChangeEvent event) {
-
-        if(pinNumber==RaspiPin.GPIO_01.toString() || )
 
         pinNumber = event.getPin().toString();
         pinState = event.getState().isLow() ? true : false;
         dateTime = LocalDateTime.now();
 
-
-
         System.out.println(pinNumber + " " + pinState + " " + dateTime);
 
     }
-
 
 
 
