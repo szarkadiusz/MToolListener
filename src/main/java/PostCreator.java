@@ -17,7 +17,7 @@ public class PostCreator {
     MeasurementData measurementData = new MeasurementData();
 
     public void jsonCreator() throws IOException {
-        String json = measurementData.inputDataToString();
+        String json = measurementData.toString();
 
         RequestBody body = RequestBody.create(
                 MediaType.parse("application/json"), json);
