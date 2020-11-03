@@ -1,3 +1,4 @@
+import com.mongodb.*;
 import com.pi4j.io.gpio.*;
 import com.pi4j.io.gpio.event.GpioPinDigitalStateChangeEvent;
 import com.pi4j.io.gpio.event.GpioPinListenerDigital;
@@ -20,8 +21,10 @@ public class EventListener {
 
     public static void main(String args[]) throws InterruptedException, IOException {
         System.out.println("<--Pi4J--> GPIO Listen Example ... started.");
-        PostCreator postCreator = new PostCreator();
+//        PostCreator postCreator = new PostCreator();
 
+//        MeasurementData measurementData = new MeasurementData();
+//        measurementData.inputDataToString();
         // create gpio controller
         final GpioController gpio = GpioFactory.getInstance();
 
@@ -103,7 +106,6 @@ public class EventListener {
             }
         });
 
-        postCreator.jsonCreator();
         // keep program running until user aborts (CTRL-C)
         while (true) {
             Thread.sleep(500);
@@ -121,9 +123,23 @@ public class EventListener {
         pinState = event.getState().isLow() ? true : false;
         dateTime = LocalDateTime.now();
 
-        System.out.println(pinNumber + " " + pinState + " " + dateTime);
+        mongoDBDataInsert();
+//        System.out.println(pinNumber + " " + pinState + " " + dateTime);
 
     }
+
+public static void mongoDBDataInsert(){
+
+MongoClient mongoClient = new MongoClient("192.168.1.1",27017);
+
+    DB database = mongoClient.getDB("MToolData");
+    DBCollection collection = database.getCollection("MToolListenerDB");
+    BasicDBObject document = new BasicDBObject();
+    document.put("Station", pinNumber);
+    document.put("DateTime", dateTime);
+    document.put("PinState", pinState);
+    collection.insert(document);
+}
 
 
 
