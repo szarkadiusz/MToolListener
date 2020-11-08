@@ -2,33 +2,21 @@ import com.mongodb.*;
 import com.pi4j.io.gpio.*;
 import com.pi4j.io.gpio.event.GpioPinDigitalStateChangeEvent;
 import com.pi4j.io.gpio.event.GpioPinListenerDigital;
-import org.joda.time.PeriodType;
-
 import java.io.IOException;
-import java.time.Duration;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.Period;
-import java.time.format.DateTimeFormatter;
-import java.util.Date;
 
 public class EventListener {
     static String pinNumber;
     static Boolean pinState;
-    static LocalDateTime dateTime;
-
-
+    static String dateTime;
+    static MongoClient mongoClient = new MongoClient("192.168.1.129",27017);
 
     public static void main(String args[]) throws InterruptedException, IOException {
         System.out.println("<--Pi4J--> GPIO Listen Example ... started.");
-//        PostCreator postCreator = new PostCreator();
 
-//        MeasurementData measurementData = new MeasurementData();
-//        measurementData.inputDataToString();
-        // create gpio controller
         final GpioController gpio = GpioFactory.getInstance();
 
-        // provision gpio pin #02 as an input pin with its internal pull down resistor enabled
+
         final GpioPinDigitalInput s1in = gpio.provisionDigitalInputPin(RaspiPin.GPIO_01);
         final GpioPinDigitalInput s1out = gpio.provisionDigitalInputPin(RaspiPin.GPIO_02);
         final GpioPinDigitalInput s2in = gpio.provisionDigitalInputPin(RaspiPin.GPIO_03);
@@ -38,10 +26,7 @@ public class EventListener {
         final GpioPinDigitalInput s4in = gpio.provisionDigitalInputPin(RaspiPin.GPIO_07);
         final GpioPinDigitalInput s4out = gpio.provisionDigitalInputPin(RaspiPin.GPIO_08);
 
-        // set shutdown state for this input pin
 
-
-        // create and register gpio pin listener
         s1in.addListener(new GpioPinListenerDigital() {
             @Override
             public void handleGpioPinDigitalStateChangeEvent(GpioPinDigitalStateChangeEvent event) {
@@ -106,7 +91,7 @@ public class EventListener {
             }
         });
 
-        // keep program running until user aborts (CTRL-C)
+
         while (true) {
             Thread.sleep(500);
 
@@ -114,14 +99,14 @@ public class EventListener {
         // gpio.shutdown();   <--- implement this method call if you wish to terminate the Pi4J GPIO controller
 
 
-
     }
 
     public static void stateChange(GpioPinDigitalStateChangeEvent event) {
 
+
         pinNumber = event.getPin().toString();
-        pinState = event.getState().isLow() ? true : false;
-        dateTime = LocalDateTime.now();
+        pinState = event.getState().isLow();
+        dateTime = LocalDateTime.now().toString();
 
         mongoDBDataInsert();
 //        System.out.println(pinNumber + " " + pinState + " " + dateTime);
@@ -130,15 +115,20 @@ public class EventListener {
 
 public static void mongoDBDataInsert(){
 
-MongoClient mongoClient = new MongoClient("192.168.1.1",27017);
 
-    DB database = mongoClient.getDB("MToolData");
-    DBCollection collection = database.getCollection("MToolListenerDB");
+
+    DB database = mongoClient.getDB("MTool");
+    System.out.println("Connect to database successfully");
+
+    DBCollection collection = database.getCollection("MToolData");
+    System.out.println("Collection selected successfully");
+
     BasicDBObject document = new BasicDBObject();
     document.put("Station", pinNumber);
     document.put("DateTime", dateTime);
     document.put("PinState", pinState);
     collection.insert(document);
+    System.out.println("Data inserted successfully");
 }
 
 
