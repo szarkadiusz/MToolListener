@@ -4,12 +4,16 @@ import com.pi4j.io.gpio.event.GpioPinDigitalStateChangeEvent;
 import com.pi4j.io.gpio.event.GpioPinListenerDigital;
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 
 public class EventListener {
     static String pinNumber;
     static Boolean pinState;
     static String dateTime;
     static MongoClient mongoClient = new MongoClient("192.168.1.129",27017);
+
+    static DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss").withZone(ZoneOffset.UTC);
 
     public static void main(String args[]) throws InterruptedException, IOException {
         System.out.println("<--Pi4J--> GPIO Listen Example ... started.");
@@ -102,11 +106,11 @@ public class EventListener {
     }
 
     public static void stateChange(GpioPinDigitalStateChangeEvent event) {
-
+;
 
         pinNumber = event.getPin().toString();
         pinState = event.getState().isLow();
-        dateTime = LocalDateTime.now().toString();
+        dateTime = dateTimeFormatter.format(LocalDateTime.now());
 
         mongoDBDataInsert();
 //        System.out.println(pinNumber + " " + pinState + " " + dateTime);
@@ -115,7 +119,7 @@ public class EventListener {
 
 public static void mongoDBDataInsert(){
 
-
+if (pinState) {
 
     DB database = mongoClient.getDB("MTool");
     System.out.println("Connect to database successfully");
@@ -129,6 +133,8 @@ public static void mongoDBDataInsert(){
     document.put("PinState", pinState);
     collection.insert(document);
     System.out.println("Data inserted successfully");
+}
+
 }
 
 
