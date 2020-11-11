@@ -3,6 +3,7 @@ import com.pi4j.io.gpio.*;
 import com.pi4j.io.gpio.event.GpioPinDigitalStateChangeEvent;
 import com.pi4j.io.gpio.event.GpioPinListenerDigital;
 import java.io.IOException;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -118,7 +119,7 @@ public class EventListener {
     }
 
 public static void mongoDBDataInsert(){
-
+Station station = new Station();
 if (pinState) {
 
     DB database = mongoClient.getDB("MTool");
@@ -131,11 +132,76 @@ if (pinState) {
     document.put("Station", pinNumber);
     document.put("DateTime", dateTime);
     document.put("PinState", pinState);
+    document.put("CT", station.productProductionStart);
     collection.insert(document);
     System.out.println("Data inserted successfully");
 }
 
 }
+
+
+public static class StateHolder{
+        public static Station[] stations = new Station[4];
+
+}
+public static class Station {
+    private int productCounter = 0;
+    private LocalDateTime productProductionStart = null;
+
+
+    public void startPinActivated() {
+
+            productProductionStart=LocalDateTime.now();
+        }
+
+
+
+    public void endPinActivated() {
+
+
+            long productCycleTime = LocalDateTime.now().toEpochSecond(ZoneOffset.UTC) - productProductionStart.toEpochSecond(ZoneOffset.UTC);
+            productProductionStart = null;
+            productCounter++;
+            System.out.println("Wytworzylem pprodukt numer dataPoczatkuWytwarzania, zajelo to czasJakiToZajelo"); // + sztal do Mongo
+        }
+
+
+
+}
+
+
+
+
+//    Rekord w mongo:
+//    ID
+//    Numer szeregowy produktu (z tego licznika)
+//    Czas oslugi na tym stanowisku
+//    Data zjechanie ze stanowiska
+//    numer stanowiska
+//        + sprobuj zapisac date i godzine w formacie Mongo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
