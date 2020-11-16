@@ -2,17 +2,23 @@ import com.mongodb.*;
 import com.pi4j.io.gpio.*;
 import com.pi4j.io.gpio.event.GpioPinDigitalStateChangeEvent;
 import com.pi4j.io.gpio.event.GpioPinListenerDigital;
+
 import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class EventListener {
-    static String pinNumber;
-    static Boolean pinState;
-    static String dateTime;
-    static MongoClient mongoClient = new MongoClient("192.168.1.129",27017);
+//    static Integer pinNumber;
+//    static Boolean pinState;
+//    static String dateTime;
+
+
+    static MongoClient mongoClient = new MongoClient("192.168.1.129", 27017);
 
     static DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss").withZone(ZoneOffset.UTC);
 
@@ -20,82 +26,30 @@ public class EventListener {
         System.out.println("<--Pi4J--> GPIO Listen Example ... started.");
 
         final GpioController gpio = GpioFactory.getInstance();
+        
 
+        List<Pin> pins = Arrays.asList(
+                RaspiPin.GPIO_01,
+                RaspiPin.GPIO_02,
+                RaspiPin.GPIO_03,
+                RaspiPin.GPIO_04,
+                RaspiPin.GPIO_05,
+                RaspiPin.GPIO_06,
+                RaspiPin.GPIO_07,
+                RaspiPin.GPIO_08);
 
-        final GpioPinDigitalInput s1in = gpio.provisionDigitalInputPin(RaspiPin.GPIO_01);
-        final GpioPinDigitalInput s1out = gpio.provisionDigitalInputPin(RaspiPin.GPIO_02);
-        final GpioPinDigitalInput s2in = gpio.provisionDigitalInputPin(RaspiPin.GPIO_03);
-        final GpioPinDigitalInput s2out = gpio.provisionDigitalInputPin(RaspiPin.GPIO_04);
-        final GpioPinDigitalInput s3in = gpio.provisionDigitalInputPin(RaspiPin.GPIO_05);
-        final GpioPinDigitalInput s3out = gpio.provisionDigitalInputPin(RaspiPin.GPIO_06);
-        final GpioPinDigitalInput s4in = gpio.provisionDigitalInputPin(RaspiPin.GPIO_07);
-        final GpioPinDigitalInput s4out = gpio.provisionDigitalInputPin(RaspiPin.GPIO_08);
+        for (Pin pin : pins) {
+            GpioPinDigitalInput gpioPinDigitalInput = gpio.provisionDigitalInputPin(pin);
+            gpioPinDigitalInput.addListener(new GpioPinListenerDigital() {
+                @Override
+                public void handleGpioPinDigitalStateChangeEvent(GpioPinDigitalStateChangeEvent event) {
+                    // display pin state on console
+                    stateChange(event);
+                    ;
+                }
 
-
-        s1in.addListener(new GpioPinListenerDigital() {
-            @Override
-            public void handleGpioPinDigitalStateChangeEvent(GpioPinDigitalStateChangeEvent event) {
-                // display pin state on console
-                stateChange(event);
-                ;
-            }
-
-        });
-        s1out.addListener(new GpioPinListenerDigital() {
-            @Override
-            public void handleGpioPinDigitalStateChangeEvent(GpioPinDigitalStateChangeEvent event) {
-                // display pin state on console
-                stateChange(event);
-            }
-
-        });
-        s2in.addListener(new GpioPinListenerDigital() {
-            @Override
-            public void handleGpioPinDigitalStateChangeEvent(GpioPinDigitalStateChangeEvent event) {
-                // display pin state on console
-                stateChange(event);
-            }
-
-        });
-        s2out.addListener(new GpioPinListenerDigital() {
-            @Override
-            public void handleGpioPinDigitalStateChangeEvent(GpioPinDigitalStateChangeEvent event) {
-                // display pin state on console
-                stateChange(event);
-            }
-
-        });
-        s3in.addListener(new GpioPinListenerDigital() {
-            @Override
-            public void handleGpioPinDigitalStateChangeEvent(GpioPinDigitalStateChangeEvent event) {
-                // display pin state on console
-                stateChange(event);
-            }
-
-        });
-        s3out.addListener(new GpioPinListenerDigital() {
-            @Override
-            public void handleGpioPinDigitalStateChangeEvent(GpioPinDigitalStateChangeEvent event) {
-                // display pin state on console
-                stateChange(event);
-            }
-
-        });
-        s4in.addListener(new GpioPinListenerDigital() {
-            @Override
-            public void handleGpioPinDigitalStateChangeEvent(GpioPinDigitalStateChangeEvent event) {
-                // display pin state on console
-                stateChange(event);
-            }
-        });
-        s4out.addListener(new GpioPinListenerDigital() {
-            @Override
-            public void handleGpioPinDigitalStateChangeEvent(GpioPinDigitalStateChangeEvent event) {
-                // display pin state on console
-                stateChange(event);
-            }
-        });
-
+            });
+        }
 
         while (true) {
             Thread.sleep(500);
@@ -107,69 +61,90 @@ public class EventListener {
     }
 
     public static void stateChange(GpioPinDigitalStateChangeEvent event) {
-;
 
-        pinNumber = event.getPin().toString();
+        Integer pinNumber;
+        Boolean pinState;
+        String dateTime;
+// TODO: 14.11.2020  wyciagnasc int ?
+        pinNumber = Integer.valueOf(event.getPin().toString().substring(5,6));
         pinState = event.getState().isLow();
-        dateTime = dateTimeFormatter.format(LocalDateTime.now());
+//        dateTime = dateTimeFormatter.format(LocalDateTime.now());
 
-        mongoDBDataInsert();
+        if (pinState) {
+            int stationNumber = (pinNumber + 1) / 2;
+            Station station = StateHolder.stations[stationNumber];
+            boolean out = pinNumber % 2 == 0;
+            if (out) {
+                station.endPinActivated();
+            } else {
+                station.startPinActivated();
+            }
+        }
+
 //        System.out.println(pinNumber + " " + pinState + " " + dateTime);
 
     }
 
-public static void mongoDBDataInsert(){
-Station station = new Station();
-if (pinState) {
+    public static void mongoDBDataInsert(Station station) {
+     
 
-    DB database = mongoClient.getDB("MTool");
-    System.out.println("Connect to database successfully");
+            DB database = mongoClient.getDB("MTool");
+            System.out.println("Connect to database successfully");
 
-    DBCollection collection = database.getCollection("MToolData");
-    System.out.println("Collection selected successfully");
+            DBCollection collection = database.getCollection("MToolData");
+            System.out.println("Collection selected successfully");
 
-    BasicDBObject document = new BasicDBObject();
-    document.put("Station", pinNumber);
-    document.put("DateTime", dateTime);
-    document.put("PinState", pinState);
-    document.put("CT", station.productProductionStart);
-    collection.insert(document);
-    System.out.println("Data inserted successfully");
-}
+            BasicDBObject document = new BasicDBObject();
 
-}
+            document.put("CT", station.productCycleTime);
+            document.put("Count", station.productCounter);
+            collection.insert(document);
+            System.out.println("Data inserted successfully");
+        
+
+    }
 
 
-public static class StateHolder{
-        public static Station[] stations = new Station[4];
+    public static class StateHolder {
 
-}
-public static class Station {
-    private int productCounter = 0;
-    private LocalDateTime productProductionStart = null;
+        public static Station[] stations; 
 
+        static {
+            int size = 4;
+            stations = new Station[size];
+            for (int i = 0; i < size; i++) {
+                stations[i] = new Station();
+            }
+        }
+    }
 
-    public void startPinActivated() {
+    public static class Station {
+        private int productCounter = 0;
+        private LocalDateTime productProductionStart = null;
+        private  long productCycleTime;
 
-            productProductionStart=LocalDateTime.now();
+        public void startPinActivated() {
+
+            productProductionStart = LocalDateTime.now();
         }
 
 
+        public void endPinActivated() {
+            
+            if (productProductionStart == null) {
+                System.out.println("warning mistake");
+                return;
+            }
 
-    public void endPinActivated() {
-
-
-            long productCycleTime = LocalDateTime.now().toEpochSecond(ZoneOffset.UTC) - productProductionStart.toEpochSecond(ZoneOffset.UTC);
+            productCycleTime= LocalDateTime.now().toEpochSecond(ZoneOffset.UTC) - productProductionStart.toEpochSecond(ZoneOffset.UTC);
             productProductionStart = null;
             productCounter++;
             System.out.println("Wytworzylem pprodukt numer dataPoczatkuWytwarzania, zajelo to czasJakiToZajelo"); // + sztal do Mongo
+            
         }
 
 
-
-}
-
-
+    }
 
 
 //    Rekord w mongo:
@@ -179,30 +154,6 @@ public static class Station {
 //    Data zjechanie ze stanowiska
 //    numer stanowiska
 //        + sprobuj zapisac date i godzine w formacie Mongo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 }
