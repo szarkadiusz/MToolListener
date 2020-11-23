@@ -2,14 +2,18 @@ import com.mongodb.*;
 import com.pi4j.io.gpio.*;
 import com.pi4j.io.gpio.event.GpioPinDigitalStateChangeEvent;
 import com.pi4j.io.gpio.event.GpioPinListenerDigital;
+import org.joda.time.format.ISODateTimeFormat;
+import org.joda.time.tz.UTCProvider;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 
 public class EventListener {
@@ -18,7 +22,7 @@ public class EventListener {
 //    static String dateTime;
 
 
-    static MongoClient mongoClient = new MongoClient("192.168.1.129", 27017);
+    static MongoClient mongoClient = new MongoClient("192.168.1.98", 27017);
 
     static DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss").withZone(ZoneOffset.UTC);
 
@@ -62,17 +66,19 @@ public class EventListener {
 
     public static void stateChange(GpioPinDigitalStateChangeEvent event) {
 
+
         Integer pinNumber;
         Boolean pinState;
         String dateTime;
-// TODO: 14.11.2020  wyciagnasc int ?
-        pinNumber = Integer.valueOf(event.getPin().toString().substring(5,6));
+
+        System.out.println(event.getPin().toString().substring(6,7));
+        pinNumber = Integer.parseInt(event.getPin().toString().substring(6,7));
         pinState = event.getState().isLow();
 //        dateTime = dateTimeFormatter.format(LocalDateTime.now());
 
         if (pinState) {
             int stationNumber = (pinNumber + 1) / 2;
-            Station station = StateHolder.stations[stationNumber];
+            Station station = StateHolder.stations[stationNumber-1];
             boolean out = pinNumber % 2 == 0;
             if (out) {
                 station.endPinActivated();
@@ -81,28 +87,9 @@ public class EventListener {
             }
         }
 
-//        System.out.println(pinNumber + " " + pinState + " " + dateTime);
-
     }
 
-    public static void mongoDBDataInsert(Station station) {
-     
 
-            DB database = mongoClient.getDB("MTool");
-            System.out.println("Connect to database successfully");
-
-            DBCollection collection = database.getCollection("MToolData");
-            System.out.println("Collection selected successfully");
-
-            BasicDBObject document = new BasicDBObject();
-
-            document.put("CT", station.productCycleTime);
-            document.put("Count", station.productCounter);
-            collection.insert(document);
-            System.out.println("Data inserted successfully");
-        
-
-    }
 
 
     public static class StateHolder {
@@ -136,25 +123,35 @@ public class EventListener {
                 return;
             }
 
-            productCycleTime= LocalDateTime.now().toEpochSecond(ZoneOffset.UTC) - productProductionStart.toEpochSecond(ZoneOffset.UTC);
+            productCycleTime= LocalDateTime.now().toInstant(ZoneOffset.UTC).toEpochMilli() - productProductionStart.toInstant(ZoneOffset.UTC).toEpochMilli();
             productProductionStart = null;
             productCounter++;
-            System.out.println("Wytworzylem pprodukt numer dataPoczatkuWytwarzania, zajelo to czasJakiToZajelo"); // + sztal do Mongo
-            
+            System.out.println("Database updated");
+            mongoDBDataInsert(this);
         }
 
 
     }
+    public static void mongoDBDataInsert(Station station) {
 
 
-//    Rekord w mongo:
-//    ID
-//    Numer szeregowy produktu (z tego licznika)
-//    Czas oslugi na tym stanowisku
-//    Data zjechanie ze stanowiska
-//    numer stanowiska
-//        + sprobuj zapisac date i godzine w formacie Mongo
 
+        DB database = mongoClient.getDB("MTool");
+        System.out.println("Connect to database successfully");
+
+        DBCollection collection = database.getCollection("MToolData");
+        System.out.println("Collection selected successfully");
+
+        BasicDBObject document = new BasicDBObject();
+
+        document.put("CTmiliseconds", station.productCycleTime);
+        document.put("ProductCount", station.productCounter);
+        document.put("DateLeaved", DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss").format(LocalDateTime.now()));
+        collection.insert(document);
+        System.out.println("Data inserted successfully");
+
+
+    }
 
 }
 
